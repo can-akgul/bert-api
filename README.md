@@ -1,12 +1,10 @@
 # 🔍 Fake News Detector
 
 A powerful AI-powered fake news detection system that combines custom fine-tuned BERT models with Google's Gemini AI to provide comprehensive news analysis and generation capabilities.
-
-## How to run the app?
-
 ### Prerequisites
 - Google Gemini API Key
-
+  
+## How to run the app?
 - Clone the repistory
 - python -m venv venv
 - source venv/bin/activate
