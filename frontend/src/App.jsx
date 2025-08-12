@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import './App.css'
 import bookmarkIcon from './assets/bookmark.svg'
 
@@ -10,6 +10,8 @@ function App() {
   const [generatedNews, setGeneratedNews] = useState('')
   const [bookmarks, setBookmarks] = useState([])
   const [showBookmarks, setShowBookmarks] = useState(false)
+  const [toast, setToast] = useState('')
+  const toastTimeoutRef = useRef(null)
   const [filters, setFilters] = useState({
     content: '',
     style: '',
@@ -80,6 +82,10 @@ function App() {
       timestamp: new Date().toLocaleString()
     }
     setBookmarks([bookmark, ...bookmarks])
+    // Toast notify
+    setToast('Bookmarks saved')
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+    toastTimeoutRef.current = setTimeout(() => setToast(''), 2000)
   }
 
   const removeBookmark = (id) => {
@@ -296,8 +302,12 @@ function App() {
             </div>
           </div>
         )}
-      </div>
+      {/* Toast */}
+      {toast && (
+        <div className="toast">{toast}</div>
+      )}
     </div>
+  </div>
   )
 }
 
