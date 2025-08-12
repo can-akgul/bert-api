@@ -6,16 +6,11 @@ A powerful AI-powered fake news detection system that combines custom fine-tuned
   
 ## How to run the app?
 - Clone the repistory
-- python -m venv venv
-- source venv/bin/activate
-- pip install -r requirements.txt
-- Setup your .env file 
-
-- cd frontend
-- npm install
-- uvicorn main:app --reload
-
-- cd frontend
-- npm run dev
+- Create virtual environment
+- Install dependencies
+- Setup your .env file
+- Run the Backend
+- Setup and Run the Frontend
+- 
 Visit `http://localhost:5173` to access the application.
 
