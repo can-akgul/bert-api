@@ -11,6 +11,6 @@ A powerful AI-powered fake news detection system that combines custom fine-tuned
 - Setup your .env file
 - Run the Backend
 - Setup and Run the Frontend
-- 
+  
 Visit `http://localhost:5173` to access the application.
 
