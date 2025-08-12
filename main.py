@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from google import genai
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, JSONResponse
 import os
 import torch
 import torch.nn as nn
@@ -72,12 +72,50 @@ def prediction_model(text):
         return label[prediction]
 
 
+def prediction_gemini(text):
+    prompt = f"""
+Analyze the following news article and determine if it's FAKE or REAL news.
+
+Consider these factors:
+1. Factual accuracy and verifiability
+2. Source credibility indicators
+3. Sensational or misleading language
+4. Logical consistency
+5. Bias and emotional manipulation
+
+News article to analyze:
+"{text}"
+
+Respond with ONLY one word: either "fake" or "true" (lowercase).
+    """.strip()
+    
+    try:
+        resp = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config={"temperature": 0.1}
+        )
+        
+        result = (resp.text or "").strip().lower()
+        # Ensure we return only "fake" or "true"
+        if "fake" in result:
+            return "fake"
+        elif "true" in result or "real" in result:
+            return "true"
+        else:
+            return "unknown"
+    except Exception as e:
+        print(f"Gemini prediction error: {e}")
+        return "error"
+
+
 
 
 class GeminiRequest(BaseModel):
     context: str
     style: str
     length: str
+    additional_context: str = ""
 
 class PredictionRequest(BaseModel):
     news: str
@@ -113,15 +151,23 @@ def generate_news(req: GeminiRequest):
     }
     
     
+    base_topic = content_specs.get(req.context, req.context)
+    
+    # Add additional context if provided
+    topic_description = base_topic
+    if req.additional_context.strip():
+        topic_description = f"{base_topic} with focus on: {req.additional_context.strip()}"
+    
     prompt = f"""
-You MUST generate a news article about {content_specs.get(req.context, req.context)} ONLY.
+You MUST generate a news article about {topic_description} ONLY.
 
 STRICT REQUIREMENTS:
 1. CONTENT: The article MUST be about {req.context.upper()} - do not write about any other topic
 2. STYLE: Use {style_specs[req.style]} tone
 3. LENGTH: Write exactly {length_specs[req.length]}
+{f"4. FOCUS: Pay special attention to this context: {req.additional_context.strip()}" if req.additional_context.strip() else ""}
 
-CRITICAL: The article must be specifically about {content_specs.get(req.context, req.context)}. Do not deviate from this topic.
+CRITICAL: The article must be specifically about {topic_description}. Do not deviate from this topic.
 
 Write only the news content (no title, byline, date, or source).
     """.strip()
@@ -135,9 +181,16 @@ Write only the news content (no title, byline, date, or source).
     return (resp.text or "").strip()
 
 
-@app.post("/predict", response_class=PlainTextResponse)
+@app.post("/predict", response_class=JSONResponse)
 def predict(req: PredictionRequest):
-    return prediction_model(req.news)
+    custom_prediction = prediction_model(req.news)
+    gemini_prediction = prediction_gemini(req.news)
+    
+    return {
+        "custom_model": custom_prediction,
+        "gemini_model": gemini_prediction,
+        "news_text": req.news
+    }
 
 
 if __name__ == "__main__":

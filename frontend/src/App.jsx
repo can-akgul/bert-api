@@ -6,6 +6,10 @@ function App() {
   const [activeTab, setActiveTab] = useState('predict')
   const [newsText, setNewsText] = useState('')
   const [predictResult, setPredictResult] = useState('')
+  const [bertResult, setBertResult] = useState('')
+  const [geminiResult, setGeminiResult] = useState('')
+  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [currentBookmarkId, setCurrentBookmarkId] = useState(null)
   const [generateText, setGenerateText] = useState('')
   const [generatedNews, setGeneratedNews] = useState('')
   const [bookmarks, setBookmarks] = useState([])
@@ -52,6 +56,12 @@ function App() {
     if (!newsText.trim()) return
     
     setLoading(true)
+    setBertResult('')
+    setGeminiResult('')
+    setPredictResult('')
+    setIsBookmarked(false)
+    setCurrentBookmarkId(null)
+    
     try {
       const response = await fetch('/predict', {
         method: 'POST',
@@ -60,8 +70,10 @@ function App() {
         },
         body: JSON.stringify({ news: newsText }),
       })
-      const result = await response.text()
-      setPredictResult(result)
+      const result = await response.json()
+      setBertResult(result.custom_model)
+      setGeminiResult(result.gemini_model)
+      setPredictResult('completed')
     } catch (error) {
       setPredictResult('Error occurred while predicting')
     }
@@ -72,6 +84,10 @@ function App() {
     setNewsText(generatedNews)
     setActiveTab('predict')
     setPredictResult('')
+    setBertResult('')
+    setGeminiResult('')
+    setIsBookmarked(false)
+    setCurrentBookmarkId(null)
   }
 
   const addBookmark = (text, type) => {
@@ -86,6 +102,39 @@ function App() {
     setToast('Bookmarks saved')
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
     toastTimeoutRef.current = setTimeout(() => setToast(''), 2000)
+  }
+
+  const togglePredictionBookmark = () => {
+    if (!bertResult || !geminiResult) return
+    
+    if (isBookmarked && currentBookmarkId) {
+      // Remove bookmark
+      setBookmarks(bookmarks.filter(bookmark => bookmark.id !== currentBookmarkId))
+      setIsBookmarked(false)
+      setCurrentBookmarkId(null)
+      // Toast notify
+      setToast('Bookmark removed')
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+      toastTimeoutRef.current = setTimeout(() => setToast(''), 2000)
+    } else {
+      // Add bookmark
+      const bookmarkId = Date.now()
+      const bookmark = {
+        id: bookmarkId,
+        text: newsText,
+        type: 'prediction',
+        bertResult: bertResult,
+        geminiResult: geminiResult,
+        timestamp: new Date().toLocaleString()
+      }
+      setBookmarks([bookmark, ...bookmarks])
+      setIsBookmarked(true)
+      setCurrentBookmarkId(bookmarkId)
+      // Toast notify
+      setToast('Bookmarked')
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+      toastTimeoutRef.current = setTimeout(() => setToast(''), 2000)
+    }
   }
 
   const removeBookmark = (id) => {
@@ -103,7 +152,8 @@ function App() {
         body: JSON.stringify({
           context: filters.content,
           style: filters.style,
-          length: filters.length
+          length: filters.length,
+          additional_context: generateText
         }),
       })
       const result = await response.text()
@@ -162,17 +212,38 @@ function App() {
             >
               {loading ? 'Detecting...' : 'Detect'}
             </button>
-            {predictResult && (
-              <div className="result-row">
-                <div className={`result ${predictResult.toLowerCase()}`}>
-                  Result: {predictResult.toUpperCase()}
+            
+            {(bertResult || geminiResult) && (
+              <div className="predictions-container">
+                <div className="prediction-section">
+                  <div className="prediction-header">
+                    <h3>BERT Model</h3>
+                  </div>
+                  <div className={`prediction-result ${bertResult.toLowerCase()}`}>
+                    {bertResult ? bertResult.toUpperCase() : 'Loading...'}
+                  </div>
                 </div>
+                
+                <div className="prediction-section">
+                  <div className="prediction-header">
+                    <h3>GEMINI Model</h3>
+                  </div>
+                  <div className={`prediction-result ${geminiResult.toLowerCase()}`}>
+                    {geminiResult ? geminiResult.toUpperCase() : 'Loading...'}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {(bertResult && geminiResult) && (
+              <div className="prediction-bookmark-container">
                 <button 
-                  className="bookmark-btn result-bookmark"
-                  onClick={() => addBookmark(newsText, predictResult)}
-                  title="Bookmark this result"
+                  className={`bookmark-btn prediction-main-bookmark ${isBookmarked ? 'bookmarked' : ''}`}
+                  onClick={togglePredictionBookmark}
+                  title={isBookmarked ? 'Remove bookmark' : 'Bookmark both predictions'}
                 >
                   <img src={bookmarkIcon} alt="Bookmark" className="bookmark-icon" />
+                  {isBookmarked ? 'Remove Bookmark' : 'Add Bookmark'}
                 </button>
               </div>
             )}
@@ -269,31 +340,30 @@ function App() {
                   {bookmarks.map(bookmark => (
                     <div key={bookmark.id} className="bookmark-item">
                       <div className="bookmark-header">
-                        <span className={`bookmark-type ${bookmark.type}`}>
-                          {bookmark.type === 'generated' ? 'Generated' : bookmark.type.toUpperCase()}
-                        </span>
+                        {bookmark.type === 'prediction' ? (
+                          <div className="prediction-labels">
+                            <span className={`prediction-label bert ${bookmark.bertResult?.toLowerCase() || 'unknown'}`}>
+                              BERT: {bookmark.bertResult?.toUpperCase() || 'N/A'}
+                            </span>
+                            <span className={`prediction-label gemini ${bookmark.geminiResult?.toLowerCase() || 'unknown'}`}>
+                              GEMINI: {bookmark.geminiResult?.toUpperCase() || 'N/A'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className={`bookmark-type ${bookmark.type}`}>
+                            {bookmark.type === 'generated' ? 'Generated' : bookmark.type.toUpperCase()}
+                          </span>
+                        )}
                         <span className="bookmark-time">{bookmark.timestamp}</span>
+                      </div>
+                      <div className="bookmark-text">{bookmark.text}</div>
+                      {bookmark.type !== 'generated' && (
                         <button 
                           className="remove-bookmark"
                           onClick={() => removeBookmark(bookmark.id)}
                         >
-                          ✕
+                          Delete
                         </button>
-                      </div>
-                      <div className="bookmark-text">{bookmark.text}</div>
-                      {bookmark.type !== 'generated' && (
-                        <div className="bookmark-actions">
-                          <button 
-                            className="use-bookmark-btn"
-                            onClick={() => {
-                              setNewsText(bookmark.text)
-                              setActiveTab('predict')
-                              setShowBookmarks(false)
-                            }}
-                          >
-                            Use in Predict
-                          </button>
-                        </div>
                       )}
                     </div>
                   ))}
