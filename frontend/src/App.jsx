@@ -72,7 +72,7 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          context: generateText || 'Generate news',
+          context: filters.content,
           style: filters.style,
           length: filters.length
         }),
