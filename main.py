@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from google import genai
@@ -7,6 +8,7 @@ import os
 import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
+import uvicorn
 
 load_dotenv(override=True)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", None)
@@ -20,6 +22,14 @@ if not GEMINI_API_KEY:
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def create_model():
@@ -75,12 +85,45 @@ class PredictionRequest(BaseModel):
 
 @app.post("/generate", response_class=PlainTextResponse)
 def generate_news(req: GeminiRequest):
-    prompt = f"""
-Context: {req.context}
-Style: {req.style}
-Length: {req.length}
 
-Please generate a news based on the context, style and length. No heading, no footer, no author, no date, no source.
+    content_specs = {
+        'politics': 'politics and current events',
+        'technology': 'technology and innovation',
+        'sports': 'sports and athletics',
+        'entertainment': 'entertainment and media',
+        'health': 'health and wellness',
+        'science': 'science and technology',
+        'environment': 'environment and sustainability',
+    }
+
+    length_specs = {
+        'short': '1-2 sentences, maximum 50 words',
+        'medium': '2-4 sentences, 50-100 words', 
+        'long': '4-6 sentences, 100-200 words'
+    }
+    
+    style_specs = {
+        'neutral': 'neutral and factual tone',
+        'sensational': 'sensational and dramatic tone',
+        'clickbait': 'clickbait and sensational tone',
+        'misleading': 'misleading and inaccurate tone',
+        'investigative': 'investigative and critical tone',
+        'satirical': 'satirical and critical tone',
+        'humorous': 'humorous and critical tone',
+    }
+    
+    
+    prompt = f"""
+You MUST generate a news article about {content_specs.get(req.context, req.context)} ONLY.
+
+STRICT REQUIREMENTS:
+1. CONTENT: The article MUST be about {req.context.upper()} - do not write about any other topic
+2. STYLE: Use {style_specs[req.style]} tone
+3. LENGTH: Write exactly {length_specs[req.length]}
+
+CRITICAL: The article must be specifically about {content_specs.get(req.context, req.context)}. Do not deviate from this topic.
+
+Write only the news content (no title, byline, date, or source).
     """.strip()
 
     resp = client.models.generate_content(
@@ -95,3 +138,7 @@ Please generate a news based on the context, style and length. No heading, no fo
 @app.post("/predict", response_class=PlainTextResponse)
 def predict(req: PredictionRequest):
     return prediction_model(req.news)
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
