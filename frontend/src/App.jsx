@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './App.css'
+import bookmarkIcon from './assets/bookmark.svg'
 
 function App() {
   const [activeTab, setActiveTab] = useState('predict')
@@ -7,6 +8,8 @@ function App() {
   const [predictResult, setPredictResult] = useState('')
   const [generateText, setGenerateText] = useState('')
   const [generatedNews, setGeneratedNews] = useState('')
+  const [bookmarks, setBookmarks] = useState([])
+  const [showBookmarks, setShowBookmarks] = useState(false)
   const [filters, setFilters] = useState({
     content: '',
     style: '',
@@ -63,6 +66,26 @@ function App() {
     setLoading(false)
   }
 
+  const handlePredictGenerated = () => {
+    setNewsText(generatedNews)
+    setActiveTab('predict')
+    setPredictResult('')
+  }
+
+  const addBookmark = (text, type) => {
+    const bookmark = {
+      id: Date.now(),
+      text: text,
+      type: type,
+      timestamp: new Date().toLocaleString()
+    }
+    setBookmarks([bookmark, ...bookmarks])
+  }
+
+  const removeBookmark = (id) => {
+    setBookmarks(bookmarks.filter(bookmark => bookmark.id !== id))
+  }
+
   const handleGenerate = async () => {
     setLoading(true)
     try {
@@ -88,6 +111,18 @@ function App() {
   return (
     <div className="app">
       <div className="container">
+        {/* Title with Bookmarks */}
+        <div className="title-container">
+          <h1 className="app-title">Fake News Detector</h1>
+          <button 
+            className="bookmarks-toggle"
+            onClick={() => setShowBookmarks(!showBookmarks)}
+            title="Bookmarks"
+          >
+            <img src={bookmarkIcon} alt="Bookmarks" className="bookmark-icon" />
+          </button>
+        </div>
+        
         {/* Tab Buttons */}
         <div className="tab-buttons">
           <button 
@@ -122,8 +157,17 @@ function App() {
               {loading ? 'Detecting...' : 'Detect'}
             </button>
             {predictResult && (
-              <div className={`result ${predictResult.toLowerCase()}`}>
-                Result: {predictResult.toUpperCase()}
+              <div className="result-row">
+                <div className={`result ${predictResult.toLowerCase()}`}>
+                  Result: {predictResult.toUpperCase()}
+                </div>
+                <button 
+                  className="bookmark-btn result-bookmark"
+                  onClick={() => addBookmark(newsText, predictResult)}
+                  title="Bookmark this result"
+                >
+                  <img src={bookmarkIcon} alt="Bookmark" className="bookmark-icon" />
+                </button>
               </div>
             )}
           </div>
@@ -184,8 +228,72 @@ function App() {
             {generatedNews && (
               <div className="generated-result">
                 {generatedNews}
+                <div className="generated-actions">
+                  <button 
+                    className="predict-generated-btn"
+                    onClick={handlePredictGenerated}
+                    title="Predict this generated news"
+                  >
+                    Predict This →
+                  </button>
+
+                </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Bookmarks Overlay */}
+        {showBookmarks && (
+          <div className="bookmarks-overlay">
+            <div className="bookmarks-modal">
+              <div className="bookmarks-header">
+                <h2>Bookmarks</h2>
+                <button 
+                  className="close-bookmarks"
+                  onClick={() => setShowBookmarks(false)}
+                >
+                  ✕
+                </button>
+              </div>
+              {bookmarks.length === 0 ? (
+                <div className="empty-bookmarks">No bookmarks yet</div>
+              ) : (
+                <div className="bookmarks-list">
+                  {bookmarks.map(bookmark => (
+                    <div key={bookmark.id} className="bookmark-item">
+                      <div className="bookmark-header">
+                        <span className={`bookmark-type ${bookmark.type}`}>
+                          {bookmark.type === 'generated' ? 'Generated' : bookmark.type.toUpperCase()}
+                        </span>
+                        <span className="bookmark-time">{bookmark.timestamp}</span>
+                        <button 
+                          className="remove-bookmark"
+                          onClick={() => removeBookmark(bookmark.id)}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="bookmark-text">{bookmark.text}</div>
+                      {bookmark.type !== 'generated' && (
+                        <div className="bookmark-actions">
+                          <button 
+                            className="use-bookmark-btn"
+                            onClick={() => {
+                              setNewsText(bookmark.text)
+                              setActiveTab('predict')
+                              setShowBookmarks(false)
+                            }}
+                          >
+                            Use in Predict
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
