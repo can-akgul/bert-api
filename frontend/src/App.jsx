@@ -3,24 +3,20 @@ import './App.css'
 import bookmarkIcon from './assets/bookmark.svg'
 
 function App() {
-  const [activeTab, setActiveTab] = useState('predict')
+  const [activeTab, setActiveTab] = useState('generate')
   const [newsText, setNewsText] = useState('')
+  const [generateText, setGenerateText] = useState('')
+  const [generatedNews, setGeneratedNews] = useState('')
   const [predictResult, setPredictResult] = useState('')
   const [bertResult, setBertResult] = useState('')
   const [geminiResult, setGeminiResult] = useState('')
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [currentBookmarkId, setCurrentBookmarkId] = useState(null)
-  const [generateText, setGenerateText] = useState('')
-  const [generatedNews, setGeneratedNews] = useState('')
-  const [bookmarks, setBookmarks] = useState([])
   const [showBookmarks, setShowBookmarks] = useState(false)
+  const [bookmarks, setBookmarks] = useState([])
   const [toast, setToast] = useState('')
   const toastTimeoutRef = useRef(null)
-  const [filters, setFilters] = useState({
-    content: '',
-    style: '',
-    length: ''
-  })
+  const [filters, setFilters] = useState({content: '', style: '', length: ''})
 
   const contentOptions = [
     { value: '', label: 'Select Content' },
