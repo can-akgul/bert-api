@@ -217,7 +217,7 @@ function App() {
               <div className="predictions-container">
                 <div className="prediction-section">
                   <div className="prediction-header">
-                    <h3>BERT Model</h3>
+                    <h3>Fine-tuned BERT MODEL</h3>
                   </div>
                   <div className={`prediction-result ${bertResult.toLowerCase()}`}>
                     {bertResult ? bertResult.toUpperCase() : 'Loading...'}
@@ -226,7 +226,7 @@ function App() {
                 
                 <div className="prediction-section">
                   <div className="prediction-header">
-                    <h3>GEMINI Model</h3>
+                    <h3>GEMİNİ MODEL</h3>
                   </div>
                   <div className={`prediction-result ${geminiResult.toLowerCase()}`}>
                     {geminiResult ? geminiResult.toUpperCase() : 'Loading...'}
