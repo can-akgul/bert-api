@@ -23,4 +23,4 @@ Visit `http://localhost:5173` to access the application.
 
 # Preview of the app
 
-<video src="video.mp4" controls width="600"></video>
+[<video src="video.mp4" controls width="600"></video>](https://github.com/user-attachments/assets/6689bb81-eda5-437f-ae19-745290f978f5)
