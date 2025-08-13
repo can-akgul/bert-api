@@ -23,4 +23,3 @@ Visit `http://localhost:5173` to access the application.
 
 # Preview of the app
 
-https://github.com/user-attachments/assets/8597fde9-a2aa-41a4-a0d8-54426a687a5f
