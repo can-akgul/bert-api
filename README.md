@@ -23,3 +23,4 @@ Visit `http://localhost:5173` to access the application.
 
 # Preview of the app
 
+<video src="video.mp4" controls width="600"></video>
