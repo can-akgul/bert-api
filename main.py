@@ -103,10 +103,10 @@ Respond with ONLY one word: either "fake" or "true" (lowercase).
         elif "true" in result or "real" in result:
             return "true"
         else:
-            return "unknown"
+            return "none"
     except Exception as e:
         print(f"Gemini prediction error: {e}")
-        return "error"
+        return "none"
 
 
 
