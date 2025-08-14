@@ -1,6 +1,6 @@
 # 🔍 Fake News Detector
 
-A powerful AI-powered fake news detection system that combines custom fine-tuned BERT models with Google's Gemini AI to provide comprehensive news analysis and generation capabilities.
+A powerful AI-powered fake news detection system that integrates a fine-tuned DistilBERT model trained on the LIAR dataset and Google’s Gemini 2.5 Flash model to deliver comprehensive news analysis and generation capabilities.
 ## Prerequisites
 - Google Gemini API Key
 
