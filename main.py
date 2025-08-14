@@ -1,14 +1,28 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.responses import PlainTextResponse, JSONResponse
+from sqlalchemy.orm import Session
+from datetime import timedelta
 from dotenv import load_dotenv
 from google import genai
-from fastapi.responses import PlainTextResponse, JSONResponse
 import os
 import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
 import uvicorn
+
+# Import our auth and database modules
+from database import get_db
+from models import User, NewsHistory, GeneratedNews
+from schemas import (
+    UserCreate, UserLogin, UserResponse, Token,
+    GeminiRequest, PredictionRequest,
+    NewsHistoryCreate, GeneratedNewsCreate
+)
+from auth import (
+    authenticate_user, create_access_token, get_password_hash,
+    get_current_user, ACCESS_TOKEN_EXPIRE_MINUTES
+)
 
 load_dotenv(override=True)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", None)
@@ -25,7 +39,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["*"],  # Production'da specific domains kullanın
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -111,18 +125,74 @@ Respond with ONLY one word: either "fake" or "true" (lowercase).
 
 
 
-class GeminiRequest(BaseModel):
-    context: str
-    style: str
-    length: str
-    additional_context: str = ""
+# Schemas are now imported from schemas.py
 
-class PredictionRequest(BaseModel):
-    news: str
+# ========== AUTH ENDPOINTS ==========
 
+@app.post("/auth/register", response_model=UserResponse)
+def register_user(user: UserCreate, db: Session = Depends(get_db)):
+    """Register a new user"""
+    # Check if username already exists
+    db_user = db.query(User).filter(User.username == user.username).first()
+    if db_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Username already registered"
+        )
+    
+    # Check if email already exists
+    db_user = db.query(User).filter(User.email == user.email).first()
+    if db_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
+    
+    # Create new user
+    hashed_password = get_password_hash(user.password)
+    db_user = User(
+        username=user.username,
+        email=user.email,
+        hashed_password=hashed_password
+    )
+    
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    
+    return db_user
+
+@app.post("/auth/login", response_model=Token)
+def login_user(user_credentials: UserLogin, db: Session = Depends(get_db)):
+    """Login user and return access token"""
+    user = authenticate_user(db, user_credentials.username, user_credentials.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/auth/me", response_model=UserResponse)
+def read_users_me(current_user: User = Depends(get_current_user)):
+    """Get current user info"""
+    return current_user
+
+# ========== PROTECTED ENDPOINTS ==========
 
 @app.post("/generate", response_class=PlainTextResponse)
-def generate_news(req: GeminiRequest):
+def generate_news(
+    req: GeminiRequest, 
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
 
     content_specs = {
         'politics': 'politics and current events',
@@ -178,20 +248,49 @@ Write only the news content (no title, byline, date, or source).
         config={"temperature": 0.7}
     )
 
-    return (resp.text or "").strip()
+    generated_text = (resp.text or "").strip()
+    
+    # Save to database
+    db_generated_news = GeneratedNews(
+        user_id=current_user.id,
+        context=req.context,
+        style=req.style,
+        length=req.length,
+        additional_context=req.additional_context,
+        generated_text=generated_text
+    )
+    db.add(db_generated_news)
+    db.commit()
+
+    return generated_text
 
 
 @app.post("/predict", response_class=JSONResponse)
-def predict(req: PredictionRequest):
+def predict(
+    req: PredictionRequest, 
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     custom_prediction = prediction_model(req.news)
     gemini_prediction = prediction_gemini(req.news)
+    
+    # Save to database
+    db_news_history = NewsHistory(
+        user_id=current_user.id,
+        news_text=req.news,
+        custom_prediction=custom_prediction,
+        gemini_prediction=gemini_prediction
+    )
+    db.add(db_news_history)
+    db.commit()
     
     return {
         "custom_model": custom_prediction,
         "gemini_model": gemini_prediction,
-        "news_text": req.news
+        "news_text": req.news,
+        "user_id": current_user.id
     }
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=9999)

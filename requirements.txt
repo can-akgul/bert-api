@@ -4,3 +4,9 @@ google-genai
 python-dotenv
 torch
 transformers
+sqlalchemy
+psycopg2-binary
+alembic
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
