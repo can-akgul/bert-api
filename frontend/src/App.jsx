@@ -1,163 +1,89 @@
-import { useState, useRef } from 'react'
+import { useEffect } from 'react'
 import './App.css'
 import bookmarkIcon from './assets/bookmark.svg'
+import { useAppDispatch } from './hooks/redux'
+import { useNewsState, useUIState, useBookmarkState } from './hooks/redux'
+import { 
+  setNewsText, 
+  setGenerateText, 
+  setFilters, 
+  predictNews, 
+  generateNews, 
+  setPredictResultsFromGenerated,
+  clearPredictResults 
+} from './store/slices/newsSlice'
+import { setActiveTab, toggleBookmarks, setShowBookmarks } from './store/slices/uiSlice'
+import { togglePredictionBookmark, removeBookmark, addBookmark as addBookmarkAction } from './store/slices/bookmarkSlice'
+import { showToastMessage } from './utils/toast'
 
 function App() {
-  const [activeTab, setActiveTab] = useState('generate')
-  const [newsText, setNewsText] = useState('')
-  const [generateText, setGenerateText] = useState('')
-  const [generatedNews, setGeneratedNews] = useState('')
-  const [predictResult, setPredictResult] = useState('')
-  const [bertResult, setBertResult] = useState('')
-  const [geminiResult, setGeminiResult] = useState('')
-  const [isBookmarked, setIsBookmarked] = useState(false)
-  const [currentBookmarkId, setCurrentBookmarkId] = useState(null)
-  const [showBookmarks, setShowBookmarks] = useState(false)
-  const [bookmarks, setBookmarks] = useState([])
-  const [toast, setToast] = useState('')
-  const toastTimeoutRef = useRef(null)
-  const [filters, setFilters] = useState({content: '', style: '', length: ''})
+  const dispatch = useAppDispatch()
+  const newsState = useNewsState()
+  const uiState = useUIState()
+  const bookmarkState = useBookmarkState()
 
-  const contentOptions = [
-    { value: '', label: 'Select Content' },
-    { value: 'politics', label: 'Politics' },
-    { value: 'technology', label: 'Technology' },
-    { value: 'sports', label: 'Sports' },
-    { value: 'entertainment', label: 'Entertainment' },
-    { value: 'health', label: 'Health' },
-    { value: 'science', label: 'Science' },
-    { value: 'environment', label: 'Environment' }
-  ]
+  const {
+    newsText,
+    generateText,
+    generatedNews,
+    predictResult,
+    bertResult,
+    geminiResult,
+    filters,
+    contentOptions,
+    styleOptions,
+    lengthOptions,
+    predictLoading,
+    generateLoading
+  } = newsState
 
-  const styleOptions = [
-    { value: '', label: 'Select Style' },
-    { value: 'neutral', label: 'Neutral' },
-    { value: 'sensational', label: 'Sensational' },
-    { value: 'clickbait', label: 'Clickbait' },
-    { value: 'misleading', label: 'Misleading' },
-    { value: 'investigative', label: 'Investigative' },
-    { value: 'satirical', label: 'Satirical' },
-    { value: 'humorous', label: 'Humorous' }
-  ]
+  const { activeTab, showBookmarks, toast } = uiState
+  const { bookmarks, isBookmarked, currentBookmarkId } = bookmarkState
 
-  const lengthOptions = [
-    { value: '', label: 'Select Length' },
-    { value: 'short', label: 'Short(50 words)' },
-    { value: 'medium', label: 'Medium(100 words)' },
-    { value: 'long', label: 'Long(200 words)' }
-  ]
-  const [loading, setLoading] = useState(false)
+  const loading = predictLoading || generateLoading
 
   const handlePredict = async () => {
     if (!newsText.trim()) return
     
-    setLoading(true)
-    setBertResult('')
-    setGeminiResult('')
-    setPredictResult('')
-    setIsBookmarked(false)
-    setCurrentBookmarkId(null)
-    
-    try {
-      const response = await fetch('/predict', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ news: newsText }),
-      })
-      const result = await response.json()
-      setBertResult(result.custom_model)
-      setGeminiResult(result.gemini_model)
-      setPredictResult('completed')
-    } catch (error) {
-      setPredictResult('Error occurred while predicting')
-    }
-    setLoading(false)
+    dispatch(clearPredictResults())
+    dispatch(predictNews(newsText))
   }
 
   const handlePredictGenerated = () => {
-    setNewsText(generatedNews)
-    setActiveTab('predict')
-    setPredictResult('')
-    setBertResult('')
-    setGeminiResult('')
-    setIsBookmarked(false)
-    setCurrentBookmarkId(null)
+    dispatch(setPredictResultsFromGenerated())
+    dispatch(setActiveTab('predict'))
   }
 
   const addBookmark = (text, type) => {
     const bookmark = {
-      id: Date.now(),
       text: text,
-      type: type,
-      timestamp: new Date().toLocaleString()
+      type: type
     }
-    setBookmarks([bookmark, ...bookmarks])
-    // Toast notify
-    setToast('Bookmarks saved')
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
-    toastTimeoutRef.current = setTimeout(() => setToast(''), 2000)
+    dispatch(addBookmarkAction(bookmark))
+    dispatch(showToastMessage('Bookmarks saved'))
   }
 
-  const togglePredictionBookmark = () => {
+  const handleTogglePredictionBookmark = () => {
     if (!bertResult || !geminiResult) return
     
-    if (isBookmarked && currentBookmarkId) {
-      // Remove bookmark
-      setBookmarks(bookmarks.filter(bookmark => bookmark.id !== currentBookmarkId))
-      setIsBookmarked(false)
-      setCurrentBookmarkId(null)
-      // Toast notify
-      setToast('Bookmark removed')
-      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
-      toastTimeoutRef.current = setTimeout(() => setToast(''), 2000)
-    } else {
-      // Add bookmark
-      const bookmarkId = Date.now()
-      const bookmark = {
-        id: bookmarkId,
-        text: newsText,
-        type: 'prediction',
-        bertResult: bertResult,
-        geminiResult: geminiResult,
-        timestamp: new Date().toLocaleString()
-      }
-      setBookmarks([bookmark, ...bookmarks])
-      setIsBookmarked(true)
-      setCurrentBookmarkId(bookmarkId)
-      // Toast notify
-      setToast('Bookmarked')
-      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
-      toastTimeoutRef.current = setTimeout(() => setToast(''), 2000)
-    }
+    dispatch(togglePredictionBookmark({ newsText, bertResult, geminiResult }))
+    
+    const message = isBookmarked ? 'Bookmark removed' : 'Bookmarked'
+    dispatch(showToastMessage(message))
   }
 
-  const removeBookmark = (id) => {
-    setBookmarks(bookmarks.filter(bookmark => bookmark.id !== id))
+  const handleRemoveBookmark = (id) => {
+    dispatch(removeBookmark(id))
   }
 
   const handleGenerate = async () => {
-    setLoading(true)
-    try {
-      const response = await fetch('/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          context: filters.content,
-          style: filters.style,
-          length: filters.length,
-          additional_context: generateText
-        }),
-      })
-      const result = await response.text()
-      setGeneratedNews(result)
-    } catch (error) {
-      setGeneratedNews('Error occurred while generating')
+    const options = {
+      context: filters.content,
+      style: filters.style,
+      length: filters.length,
+      additional_context: generateText
     }
-    setLoading(false)
+    dispatch(generateNews(options))
   }
 
   return (
@@ -168,7 +94,7 @@ function App() {
           <h1 className="app-title">Fake News Detector</h1>
           <button 
             className="bookmarks-toggle"
-            onClick={() => setShowBookmarks(!showBookmarks)}
+            onClick={() => dispatch(toggleBookmarks())}
             title="Bookmarks"
           >
             <img src={bookmarkIcon} alt="Bookmarks" className="bookmark-icon" />
@@ -179,13 +105,13 @@ function App() {
         <div className="tab-buttons">
           <button 
             className={`tab-button ${activeTab === 'predict' ? 'active' : ''}`}
-            onClick={() => setActiveTab('predict')}
+            onClick={() => dispatch(setActiveTab('predict'))}
           >
             Predict
           </button>
           <button 
             className={`tab-button ${activeTab === 'generate' ? 'active' : ''}`}
-            onClick={() => setActiveTab('generate')}
+            onClick={() => dispatch(setActiveTab('generate'))}
           >
             Generate
           </button>
@@ -198,7 +124,7 @@ function App() {
               className="text-area"
               placeholder="Enter news text to analyze..."
               value={newsText}
-              onChange={(e) => setNewsText(e.target.value)}
+              onChange={(e) => dispatch(setNewsText(e.target.value))}
               rows={6}
             />
             <button 
@@ -235,7 +161,7 @@ function App() {
               <div className="prediction-bookmark-container">
                 <button 
                   className={`bookmark-btn prediction-main-bookmark ${isBookmarked ? 'bookmarked' : ''}`}
-                  onClick={togglePredictionBookmark}
+                  onClick={handleTogglePredictionBookmark}
                   title={isBookmarked ? 'Remove bookmark' : 'Bookmark both predictions'}
                 >
                   <img src={bookmarkIcon} alt="Bookmark" className="bookmark-icon" />
@@ -253,7 +179,7 @@ function App() {
               <select
                 className="filter-select"
                 value={filters.content}
-                onChange={(e) => setFilters({...filters, content: e.target.value})}
+                onChange={(e) => dispatch(setFilters({content: e.target.value}))}
               >
                 {contentOptions.map(option => (
                   <option key={option.value} value={option.value}>
@@ -264,7 +190,7 @@ function App() {
               <select
                 className="filter-select"
                 value={filters.style}
-                onChange={(e) => setFilters({...filters, style: e.target.value})}
+                onChange={(e) => dispatch(setFilters({style: e.target.value}))}
               >
                 {styleOptions.map(option => (
                   <option key={option.value} value={option.value}>
@@ -275,7 +201,7 @@ function App() {
               <select
                 className="filter-select"
                 value={filters.length}
-                onChange={(e) => setFilters({...filters, length: e.target.value})}
+                onChange={(e) => dispatch(setFilters({length: e.target.value}))}
               >
                 {lengthOptions.map(option => (
                   <option key={option.value} value={option.value}>
@@ -289,7 +215,7 @@ function App() {
               className="text-input"
               placeholder="Enter context for news generation (optional)..."
               value={generateText}
-              onChange={(e) => setGenerateText(e.target.value)}
+              onChange={(e) => dispatch(setGenerateText(e.target.value))}
             />
             <button 
               className="action-button"
@@ -324,7 +250,7 @@ function App() {
                 <h2>Bookmarks</h2>
                 <button 
                   className="close-bookmarks"
-                  onClick={() => setShowBookmarks(false)}
+                  onClick={() => dispatch(setShowBookmarks(false))}
                 >
                   ✕
                 </button>
@@ -356,7 +282,7 @@ function App() {
                       {bookmark.type !== 'generated' && (
                         <button 
                           className="remove-bookmark"
-                          onClick={() => removeBookmark(bookmark.id)}
+                          onClick={() => handleRemoveBookmark(bookmark.id)}
                         >
                           Delete
                         </button>
