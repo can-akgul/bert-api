@@ -9,7 +9,9 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/predict': 'http://localhost:9999',
-      '/generate': 'http://localhost:9999'
+      '/generate': 'http://localhost:9999',
+      '/auth': 'http://localhost:9999',
+      '/history': 'http://localhost:9999'
     }
   },
   preview: {
@@ -17,7 +19,9 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/predict': 'http://localhost:9999',
-      '/generate': 'http://localhost:9999'
+      '/generate': 'http://localhost:9999',
+      '/auth': 'http://localhost:9999',
+      '/history': 'http://localhost:9999'
     }
   }
 })

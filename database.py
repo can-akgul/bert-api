@@ -10,7 +10,7 @@ load_dotenv()
 # Database URL - PostgreSQL
 DATABASE_URL = os.getenv(
     "DATABASE_URL", 
-    "postgresql://postgres:postgres123@postgresql-db:5432/fake_news_db"
+    "postgresql://postgres:postgres123@localhost:5432/fake_news_db"
 )
 
 # SQLAlchemy engine

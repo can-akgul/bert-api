@@ -34,6 +34,16 @@ const uiSlice = createSlice({
         clearTimeout(state.toastTimeout)
         state.toastTimeout = null
       }
+    },
+    resetUI: (state) => {
+      // Reset to initial state
+      state.activeTab = 'generate'
+      state.showBookmarks = false
+      state.toast = ''
+      if (state.toastTimeout) {
+        clearTimeout(state.toastTimeout)
+        state.toastTimeout = null
+      }
     }
   }
 })
@@ -45,7 +55,8 @@ export const {
   showToast,
   hideToast,
   setToastTimeout,
-  clearToastTimeout
+  clearToastTimeout,
+  resetUI
 } = uiSlice.actions
 
 export default uiSlice.reducer 

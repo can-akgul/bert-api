@@ -17,7 +17,8 @@ from models import User, NewsHistory, GeneratedNews
 from schemas import (
     UserCreate, UserLogin, UserResponse, Token,
     GeminiRequest, PredictionRequest,
-    NewsHistoryCreate, GeneratedNewsCreate
+    NewsHistoryCreate, GeneratedNewsCreate,
+    NewsHistoryResponse, GeneratedNewsResponse
 )
 from auth import (
     authenticate_user, create_access_token, get_password_hash,
@@ -184,6 +185,34 @@ def login_user(user_credentials: UserLogin, db: Session = Depends(get_db)):
 def read_users_me(current_user: User = Depends(get_current_user)):
     """Get current user info"""
     return current_user
+
+# ========== USER HISTORY ENDPOINTS ==========
+
+@app.get("/history/news", response_model=list[NewsHistoryResponse])
+def get_news_history(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    limit: int = 50
+):
+    """Get user's news prediction history"""
+    history = db.query(NewsHistory).filter(
+        NewsHistory.user_id == current_user.id
+    ).order_by(NewsHistory.created_at.desc()).limit(limit).all()
+    
+    return history
+
+@app.get("/history/generated", response_model=list[GeneratedNewsResponse])
+def get_generated_history(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    limit: int = 50
+):
+    """Get user's generated news history"""
+    history = db.query(GeneratedNews).filter(
+        GeneratedNews.user_id == current_user.id
+    ).order_by(GeneratedNews.created_at.desc()).limit(limit).all()
+    
+    return history
 
 # ========== PROTECTED ENDPOINTS ==========
 

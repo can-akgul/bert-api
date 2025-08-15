@@ -108,9 +108,38 @@ const newsSlice = createSlice({
       state.geminiResult = ''
       state.predictResult = ''
       state.predictError = null
+    },
+    clearAllNewsData: (state) => {
+      // Reset to initial state
+      state.newsText = ''
+      state.bertResult = ''
+      state.geminiResult = ''
+      state.predictResult = ''
+      state.predictLoading = false
+      state.predictError = null
+      state.generateText = ''
+      state.generatedNews = ''
+      state.generateLoading = false
+      state.generateError = null
+      state.filters = {
+        content: '',
+        style: '',
+        length: ''
+      }
     }
   },
   extraReducers: (builder) => {
+    // Load user history
+    builder.addCase('news/loadHistory', (state, action) => {
+      // History'den son predict sonucunu yükle
+      if (action.payload && action.payload.length > 0) {
+        const lastNews = action.payload[0]
+        state.newsText = lastNews.news_text || ''
+        state.bertResult = lastNews.custom_prediction || ''
+        state.geminiResult = lastNews.gemini_prediction || ''
+      }
+    })
+    
     // Predict news cases
     builder
       .addCase(predictNews.pending, (state) => {
@@ -155,7 +184,8 @@ export const {
   setFilters,
   clearPredictResults,
   clearGenerateResults,
-  setPredictResultsFromGenerated
+  setPredictResultsFromGenerated,
+  clearAllNewsData
 } = newsSlice.actions
 
 export default newsSlice.reducer 

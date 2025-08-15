@@ -1,8 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 import bookmarkIcon from './assets/bookmark.svg'
 import { useAppDispatch } from './hooks/redux'
-import { useNewsState, useUIState, useBookmarkState } from './hooks/redux'
+import { useNewsState, useUIState, useBookmarkState, useAuthState } from './hooks/redux'
+import Login from './components/Login'
+import Register from './components/Register'
 import { 
   setNewsText, 
   setGenerateText, 
@@ -10,10 +12,12 @@ import {
   predictNews, 
   generateNews, 
   setPredictResultsFromGenerated,
-  clearPredictResults 
+  clearPredictResults,
+  clearAllNewsData 
 } from './store/slices/newsSlice'
-import { setActiveTab, toggleBookmarks, setShowBookmarks } from './store/slices/uiSlice'
-import { togglePredictionBookmark, removeBookmark, addBookmark as addBookmarkAction } from './store/slices/bookmarkSlice'
+import { setActiveTab, toggleBookmarks, setShowBookmarks, resetUI } from './store/slices/uiSlice'
+import { togglePredictionBookmark, removeBookmark, addBookmark as addBookmarkAction, clearAllBookmarks } from './store/slices/bookmarkSlice'
+import { logout, getUserProfile, loadUserHistory } from './store/slices/authSlice'
 import { showToastMessage } from './utils/toast'
 
 function App() {
@@ -21,6 +25,9 @@ function App() {
   const newsState = useNewsState()
   const uiState = useUIState()
   const bookmarkState = useBookmarkState()
+  const authState = useAuthState()
+  
+  const [authView, setAuthView] = useState('login') // 'login' or 'register'
 
   const {
     newsText,
@@ -39,8 +46,39 @@ function App() {
 
   const { activeTab, showBookmarks, toast } = uiState
   const { bookmarks, isBookmarked, currentBookmarkId } = bookmarkState
+  const { isAuthenticated, user, loading: authLoading } = authState
 
   const loading = predictLoading || generateLoading
+
+  // Auth handlers
+  const handleLoginSuccess = async () => {
+    await dispatch(getUserProfile())
+    dispatch(loadUserHistory())
+  }
+
+  const handleRegisterSuccess = () => {
+    setAuthView('login')
+    showToastMessage('Kayıt başarılı! Giriş yapabilirsiniz.', 'success')
+  }
+
+  const handleLogout = () => {
+    // Clear all user-specific data
+    dispatch(clearAllNewsData())
+    dispatch(clearAllBookmarks())
+    dispatch(resetUI())
+    dispatch(logout())
+    
+    showToastMessage('Başarıyla çıkış yapıldı', 'success')
+  }
+
+  // Check for existing token on app load
+  useEffect(() => {
+    if (isAuthenticated && !user) {
+      dispatch(getUserProfile()).then(() => {
+        dispatch(loadUserHistory())
+      })
+    }
+  }, [isAuthenticated, user, dispatch])
 
   const handlePredict = async () => {
     if (!newsText.trim()) return
@@ -86,19 +124,63 @@ function App() {
     dispatch(generateNews(options))
   }
 
+  // Show auth screens if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="app" data-theme="default">
+        {/* Toast notification */}
+        {toast && (
+          <div className={`toast toast-${toast.type}`}>
+            {toast.message}
+          </div>
+        )}
+        
+        {authView === 'login' ? (
+          <Login 
+            onSwitchToRegister={() => setAuthView('register')}
+            onLoginSuccess={handleLoginSuccess}
+          />
+        ) : (
+          <Register 
+            onSwitchToLogin={() => setAuthView('login')}
+            onRegisterSuccess={handleRegisterSuccess}
+          />
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       <div className="container">
-        {/* Title with Bookmarks */}
-        <div className="title-container">
-          <h1 className="app-title">Fake News Detector</h1>
-          <button 
-            className="bookmarks-toggle"
-            onClick={() => dispatch(toggleBookmarks())}
-            title="Bookmarks"
-          >
-            <img src={bookmarkIcon} alt="Bookmarks" className="bookmark-icon" />
-          </button>
+        {/* Header with user info and controls */}
+        <div className="app-header">
+          <div className="title-container">
+            <h1 className="app-title">Fake News Detector</h1>
+            <div className="header-controls">
+              <button 
+                className="bookmarks-toggle"
+                onClick={() => dispatch(toggleBookmarks())}
+                title="Bookmarks"
+              >
+                <img src={bookmarkIcon} alt="Bookmarks" className="bookmark-icon" />
+              </button>
+            </div>
+          </div>
+          
+          {/* User info bar */}
+          <div className="user-info-bar">
+            <span className="user-greeting">
+              Hoşgeldin, <strong>{user?.username || 'Kullanıcı'}</strong>
+            </span>
+            <button 
+              className="logout-button"
+              onClick={handleLogout}
+              title="Çıkış Yap"
+            >
+              Çıkış
+            </button>
+          </div>
         </div>
         
         {/* Tab Buttons */}

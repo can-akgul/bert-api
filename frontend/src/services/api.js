@@ -15,11 +15,11 @@ api.interceptors.request.use(
     // Log request for debugging
     console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`)
     
-    // You can add auth tokens here if needed
-    // const token = localStorage.getItem('token')
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`
-    // }
+    // Add auth token to requests
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
     
     return config
   },
@@ -86,7 +86,38 @@ api.interceptors.response.use(
   }
 )
 
-// API methods
+// Auth API methods
+export const authAPI = {
+  register: async (userData) => {
+    const response = await api.post('/auth/register', userData)
+    return response.data
+  },
+  
+  login: async (credentials) => {
+    const response = await api.post('/auth/login', credentials)
+    return response.data
+  },
+  
+  getProfile: async () => {
+    const response = await api.get('/auth/me')
+    return response.data
+  }
+}
+
+// History API methods
+export const historyAPI = {
+  getNewsHistory: async (limit = 50) => {
+    const response = await api.get(`/history/news?limit=${limit}`)
+    return response.data
+  },
+  
+  getGeneratedHistory: async (limit = 50) => {
+    const response = await api.get(`/history/generated?limit=${limit}`)
+    return response.data
+  }
+}
+
+// News API methods
 export const newsAPI = {
   predict: async (newsText) => {
     const response = await api.post('/predict', { news: newsText })

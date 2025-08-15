@@ -59,7 +59,49 @@ const bookmarkSlice = createSlice({
     clearBookmarkState: (state) => {
       state.isBookmarked = false
       state.currentBookmarkId = null
+    },
+    clearAllBookmarks: (state) => {
+      // Reset to initial state
+      state.bookmarks = []
+      state.isBookmarked = false
+      state.currentBookmarkId = null
     }
+  },
+  extraReducers: (builder) => {
+    // Load user history as bookmarks
+    builder.addCase('bookmarks/loadHistory', (state, action) => {
+      const { newsHistory, generatedHistory } = action.payload
+      const bookmarks = []
+      
+      // Convert news history to bookmarks
+      newsHistory.forEach(item => {
+        bookmarks.push({
+          id: `news-${item.id}`,
+          type: 'prediction',
+          text: item.news_text,
+          bertResult: item.custom_prediction,
+          geminiResult: item.gemini_prediction,
+          timestamp: new Date(item.created_at).toLocaleString()
+        })
+      })
+      
+      // Convert generated history to bookmarks
+      generatedHistory.forEach(item => {
+        bookmarks.push({
+          id: `generated-${item.id}`,
+          type: 'generated',
+          text: item.generated_text,
+          context: item.context,
+          style: item.style,
+          timestamp: new Date(item.created_at).toLocaleString()
+        })
+      })
+      
+      // Sort by timestamp (newest first)
+      state.bookmarks = bookmarks.sort((a, b) => 
+        new Date(b.timestamp) - new Date(a.timestamp)
+      )
+    })
   }
 })
 
@@ -68,7 +110,8 @@ export const {
   removeBookmark,
   togglePredictionBookmark,
   setBookmarkState,
-  clearBookmarkState
+  clearBookmarkState,
+  clearAllBookmarks
 } = bookmarkSlice.actions
 
 export default bookmarkSlice.reducer 
