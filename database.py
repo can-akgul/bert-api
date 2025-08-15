@@ -8,10 +8,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Database URL - PostgreSQL
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "postgresql://postgres:postgres123@localhost:5432/fake_news_db"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is required")
 
 # SQLAlchemy engine
 engine = create_engine(

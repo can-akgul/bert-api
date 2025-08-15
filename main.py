@@ -26,13 +26,13 @@ from auth import (
 )
 
 load_dotenv(override=True)
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", None)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY environment variable is required")
+
 GEMINI_MODEL   = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 AGENT_SYSTEM   = os.getenv("AGENT_SYSTEM", "")
 AGENT_STYLE    = os.getenv("AGENT_STYLE", "")
-
-if not GEMINI_API_KEY:
-    raise ValueError("KEY NOT FOUND")
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 
