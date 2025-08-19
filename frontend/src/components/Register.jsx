@@ -75,14 +75,15 @@ const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h2>Kayıt Ol</h2>
+        <h2>Register</h2>
         <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
+          <div className="form-group username">
             <label htmlFor="username">Kullanıcı Adı:</label>
             <input
               type="text"
               id="username"
               name="username"
+              placeholder="Username"
               value={formData.username}
               onChange={handleChange}
               required
@@ -90,12 +91,13 @@ const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
             />
           </div>
           
-          <div className="form-group">
+          <div className="form-group email">
             <label htmlFor="email">Email:</label>
             <input
               type="email"
               id="email"
               name="email"
+              placeholder="Email"
               value={formData.email}
               onChange={handleChange}
               required
@@ -103,12 +105,13 @@ const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
             />
           </div>
           
-          <div className="form-group">
+          <div className="form-group password">
             <label htmlFor="password">Şifre:</label>
             <input
               type="password"
               id="password"
               name="password"
+              placeholder="Password"
               value={formData.password}
               onChange={handleChange}
               required
@@ -116,12 +119,13 @@ const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
             />
           </div>
           
-          <div className="form-group">
+          <div className="form-group password">
             <label htmlFor="confirmPassword">Şifre Tekrar:</label>
             <input
               type="password"
               id="confirmPassword"
               name="confirmPassword"
+              placeholder="Confirm Password"
               value={formData.confirmPassword}
               onChange={handleChange}
               required
@@ -140,7 +144,7 @@ const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
             className="auth-button"
             disabled={loading}
           >
-            {loading ? 'Kayıt yapılıyor...' : 'Kayıt Ol'}
+            {loading ? 'Creating account...' : 'Kayıt Ol'}
           </button>
         </form>
 

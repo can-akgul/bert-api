@@ -1,5 +1,23 @@
 import axios from 'axios'
 
+// Helper function for user-friendly error messages
+const getErrorMessage = (status) => {
+  switch (status) {
+    case 400:
+      return 'Geçersiz istek. Lütfen bilgilerinizi kontrol edin.'
+    case 401:
+      return 'Kullanıcı adı veya şifre hatalı.'
+    case 403:
+      return 'Bu işlem için yetkiniz yok.'
+    case 404:
+      return 'İstenen kaynak bulunamadı.'
+    case 500:
+      return 'Sunucu hatası. Lütfen daha sonra tekrar deneyin.'
+    default:
+      return `HTTP Hatası: ${status}`
+  }
+}
+
 // Create axios instance
 const api = axios.create({
   baseURL: '/', // Since we're using relative URLs in the original code
@@ -64,7 +82,7 @@ api.interceptors.response.use(
       
       // Return a more user-friendly error message
       return Promise.reject({
-        message: data?.message || `HTTP Error: ${status}`,
+        message: data?.detail || data?.message || getErrorMessage(status),
         status,
         data
       })
